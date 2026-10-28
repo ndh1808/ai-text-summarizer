@@ -70,7 +70,7 @@ GEMINI_API_KEY=YOUR_OWN_API_KEY
 
 **Bảo mật:** Không đưa key vào GitHub, ảnh chụp màn hình hay báo cáo. Không nhập tài liệu bí mật vì văn bản sẽ được gửi tới dịch vụ Gemini khi chọn chế độ AI.
 
-**Lưu ý:** Mã sử dụng `google-genai` và model mặc định `gemini-2.5-flash`. Danh sách model hoặc quyền truy cập có thể thay đổi; khi API báo model không tồn tại, cần cập nhật tên model trong `app.py` theo tài liệu của Google.
+**Lưu ý:** Mã sử dụng `google-genai` và model mặc định `gemini-3.8-flash`. Ứng dụng cho phép chọn `gemini-3.8-flash` (mặc định), `gemini-3.6-flash` hoặc `gemini-3.5-flash-lite` trong thanh bên. Quyền truy cập và hạn mức phụ thuộc tài khoản/API key.
 
 ## 4. Minh họa luồng xử lý
 

@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from summarizer import build_prompt, offline_summarize, split_sentences, split_text_chunks, word_count
+from summarizer import build_prompt, offline_summarize, split_sentences, split_text_chunks, word_count, gemini_summarize
 
 
 class SummaryTests(unittest.TestCase):
@@ -41,6 +41,11 @@ class SummaryTests(unittest.TestCase):
         self.assertGreater(len(chunks), 1)
         self.assertTrue(all(len(chunk) <= 250 for chunk in chunks))
         self.assertEqual(" ".join(chunks), original)
+
+    def test_gemini_default_model(self):
+        import inspect
+        signature = inspect.signature(gemini_summarize)
+        self.assertEqual(signature.parameters["model"].default, "gemini-3.8-flash")
 
     def test_prompt_guards(self):
         prompt = build_prompt('Thử nghiệm nguồn.', 'Vừa', 'Đoạn văn', 'Tiếng Việt')

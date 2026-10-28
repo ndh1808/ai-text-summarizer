@@ -41,6 +41,7 @@ class LargeDocumentTests(unittest.TestCase):
         fake_types = types.ModuleType("google.genai.types")
         fake_genai.Client = lambda api_key: fake_client
         fake_types.GenerateContentConfig = lambda **kwargs: kwargs
+        fake_types.ThinkingConfig = lambda **kwargs: kwargs
         fake_genai.types = fake_types
         fake_google.genai = fake_genai
         text = "Hội nghị tổng kết những kết quả mới của ngành khoa học. " * 750
@@ -53,6 +54,9 @@ class LargeDocumentTests(unittest.TestCase):
         self.assertEqual(len(calls), len(chunks) + 1)
         self.assertEqual(progress[-1], (len(calls), len(calls)))
         self.assertEqual(result, "Tóm tắt dữ liệu nguồn.")
+        self.assertEqual(calls[0]["model"], "gemini-3.8-flash")
+        self.assertEqual(calls[0]["config"]["thinking_config"]["thinking_level"], "low")
+        self.assertNotIn("temperature", calls[0]["config"])
 
 
 if __name__ == "__main__":

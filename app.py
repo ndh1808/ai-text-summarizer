@@ -42,10 +42,15 @@ with st.sidebar:
     st.subheader("⚙️ Cấu hình")
     mode = st.radio("Chế độ xử lý", ["Gemini AI (tạo sinh)", "Demo ngoại tuyến (trích xuất)"],
                     help="Chế độ Demo chỉ chọn câu từ bài gốc, không tạo nội dung mới.")
-    model = "gemini-2.5-flash"
+    model = "gemini-3.8-flash"
     api_key = ""
     if mode.startswith("Gemini"):
-        st.caption(f"Mô hình: `{model}`")
+        model = st.selectbox(
+            "Mô hình Gemini",
+            ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"],
+            index=0,
+            help="Mặc định là Gemini 3.8 Flash; có thể chọn mô hình khác nếu bị giới hạn quyền truy cập hoặc hạn mức.",
+        )
         api_key = st.text_input("Gemini API key", type="password", value="",
                                 placeholder="Dán API key vào đây (nếu chưa đặt .env)")
         api_key = api_key or os.getenv("GEMINI_API_KEY", "")

@@ -155,7 +155,7 @@ def gemini_summarize(
     length: Length = "Vừa",
     output_format: Format = "Đoạn văn",
     language: Language = "Giữ ngôn ngữ gốc",
-    model: str = "gemini-2.5-flash",
+    model: str = "gemini-3.8-flash",
     progress_callback: Callable[[int, int], None] | None = None,
 ) -> str:
     if not api_key.strip():
@@ -174,7 +174,10 @@ def gemini_summarize(
         response = client.models.generate_content(
             model=model,
             contents=prompt,
-            config=types.GenerateContentConfig(temperature=0.2, max_output_tokens=1600),
+            config=types.GenerateContentConfig(
+                max_output_tokens=4096,
+                thinking_config=types.ThinkingConfig(thinking_level="low"),
+            ),
         )
         result = (response.text or "").strip()
         if not result:
