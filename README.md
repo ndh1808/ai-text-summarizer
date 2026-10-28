@@ -158,3 +158,11 @@ AI_Text_Summarizer_Project/
 - Với văn bản dài, Gemini chia nội dung thành các phần tối đa 16.000 ký tự, tóm tắt lần lượt rồi tổng hợp thành kết quả chung. Việc này sử dụng nhiều lượt gọi API, có thể chậm và tiêu thụ hạn mức Gemini.
 - File đến **50 MB** được chấp nhận; PDF tối đa **300 trang**, nhưng chỉ trích xuất **200.000 ký tự đầu** trong mỗi lần xử lý. Nếu vượt giới hạn, ứng dụng **cảnh báo đã cắt bớt**. Để bao phủ toàn bộ tài liệu, hãy chia file trước khi tải.
 - Cấu hình giới hạn tải lên ở `.streamlit/config.toml` bằng `server.maxUploadSize = 50` và kiểm tra riêng trong `document_reader.py`.
+
+
+## Tự xử lý lỗi quá tải Gemini (503)
+
+- Nếu mô hình đã chọn gặp lỗi `503 UNAVAILABLE`, ứng dụng để SDK tự thử lại với backoff trước, sau đó thử lần lượt `gemini-3.6-flash` và `gemini-3.5-flash-lite`. Không retry vô hạn.
+- Khi sử dụng mô hình dự phòng, giao diện sẽ thông báo mô hình đã thực sự tạo kết quả. Tài liệu dài có thể dùng nhiều mô hình ở các lượt xử lý khác nhau.
+- Lỗi API key (401), giới hạn API (429) và lỗi cấu hình khác **không** tự động được coi là quá tải. Nếu cả ba mô hình đều quá tải, ứng dụng hiển thị thông báo dễ hiểu để thử lại hoặc chuyển chế độ demo.
+- Mã xử lý ở `summarizer.py`; kiểm thử tình huống bằng mô phỏng ở `tests/test_model_fallback.py`. Chưa xác minh hoạt động trên API key của người dùng.
