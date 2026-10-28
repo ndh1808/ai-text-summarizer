@@ -1,6 +1,7 @@
 """Vietnamese Streamlit UI for the Generative AI Text Summarizer project."""
 from __future__ import annotations
 
+import hashlib
 import os
 import time
 from pathlib import Path
@@ -8,6 +9,7 @@ from pathlib import Path
 import streamlit as st
 from dotenv import load_dotenv
 
+from document_reader import DocumentError, extract_document, MAX_UPLOAD_BYTES, MAX_TEXT_CHARS
 from summarizer import gemini_summarize, offline_summarize, word_count
 
 load_dotenv()
@@ -76,17 +78,31 @@ with left:
     if b.button("🗑️ Xóa nội dung", use_container_width=True):
         st.session_state.source = ""
         st.session_state.result = None
-    file = st.file_uploader("Hoặc tải lên tệp .txt / .md (tối đa 300 KB)", type=["txt", "md"])
-    if file is not None:
+    file = st.file_uploader(
+        "Hoặc tải file Word (.docx), PDF, TXT, MD (tối đa 5 MB)",
+        type=["txt", "md", "docx", "pdf"],
+        help="PDF cần có lớp văn bản; PDF scan bằng ảnh chưa hỗ trợ OCR.",
+    )
+    if file is None:
+        st.session_state.uploaded_signature = None
+    else:
         raw = file.getvalue()
-        if len(raw) > 300 * 1024:
-            st.error("Tệp quá lớn. Hãy tải tệp dưới 300 KB.")
-        elif st.session_state.get("uploaded_name") != (file.name, len(raw), raw[:40]):
+        signature = (file.name, hashlib.sha256(raw).hexdigest())
+        if len(raw) > MAX_UPLOAD_BYTES:
+            st.error("File lớn hơn 5 MB, hãy dùng file nhỏ hơn.")
+        elif st.session_state.get("uploaded_signature") != signature:
             try:
-                st.session_state.source = raw.decode("utf-8-sig")
-                st.session_state.uploaded_name = (file.name, len(raw), raw[:40])
-            except UnicodeDecodeError:
-                st.error("Tệp cần được lưu dưới dạng UTF-8.")
+                imported = extract_document(file.name, raw)
+            except DocumentError as exc:
+                st.error(str(exc))
+            else:
+                st.session_state.source = imported.text
+                st.session_state.uploaded_signature = signature
+                st.session_state.uploaded_truncated = imported.truncated
+                st.session_state.result = None
+                st.success(f"Đã đọc '{file.name}' — {word_count(imported.text):,} từ.")
+        if st.session_state.get("uploaded_signature") == signature and st.session_state.get("uploaded_truncated"):
+            st.warning("Tài liệu dài: chỉ 25.000 ký tự đầu được nhập để tóm tắt. Hãy chia file nếu muốn xử lý toàn bộ.")
     source = st.text_area("Nội dung cần tóm tắt", key="source", height=320,
                           placeholder="Nhập một đoạn văn hoặc nhấn 'Điền văn bản mẫu'...")
     st.caption(f"{word_count(source):,} từ · {len(source):,} ký tự (giới hạn 25.000 ký tự)")
