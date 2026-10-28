@@ -140,13 +140,24 @@ with right:
                         progress_bar = st.progress(0, text="Đang tóm tắt...")
                         def update_progress(done: int, total: int) -> None:
                             progress_bar.progress(round(done / total * 100), text=f"Đã xử lý {done}/{total} lượt AI")
+                        models_used = []
+                        def report_model_used(name: str) -> None:
+                            if name not in models_used:
+                                models_used.append(name)
                         try:
-                            result = gemini_summarize(source, api_key, length, output_format, language, model,
-                                                      progress_callback=update_progress)
+                            result = gemini_summarize(
+                                source, api_key, length, output_format, language, model,
+                                progress_callback=update_progress,
+                                model_used_callback=report_model_used,
+                            )
                         finally:
                             progress_bar.empty()
+                        st.session_state.last_models_used = models_used
+                        st.session_state.last_model_fallback = any(m != model for m in models_used)
                     else:
                         result = offline_summarize(source, length, output_format)
+                        st.session_state.last_models_used = []
+                        st.session_state.last_model_fallback = False
                 st.session_state.result = result
                 st.session_state.last_duration = time.perf_counter() - started
                 st.session_state.last_mode = mode
@@ -157,6 +168,13 @@ with right:
     result = st.session_state.result
     if result:
         st.success("Đã tạo bản tóm tắt")
+        if st.session_state.get("last_model_fallback"):
+            st.info(
+                "Mô hình bạn chọn đang quá tải (503), hệ thống đã tự chuyển sang "
+                "mô hình dự phòng: " + ", ".join(st.session_state.last_models_used)
+            )
+        elif st.session_state.get("last_models_used"):
+            st.caption("Mô hình đã sử dụng: " + ", ".join(st.session_state.last_models_used))
         st.markdown(result)
         st.divider()
         st.download_button("⬇️ Tải kết quả (.txt)", data=result.encode("utf-8"),

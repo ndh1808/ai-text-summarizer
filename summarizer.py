@@ -130,6 +130,18 @@ QUY TẮC:
 
 
 CHUNK_SIZE_CHARS = 16_000
+# Google SDK đã tự retry ngắn theo exponential backoff với HTTP 503.
+# Nếu hết lượt retry của một model, thử model khác để không dừng ứng dụng.
+FALLBACK_MODELS = ("gemini-3.6-flash", "gemini-3.5-flash-lite")
+
+
+def _is_overloaded_error(exc: Exception) -> bool:
+    """Chỉ tự đổi model khi lỗi 503 (quá tải); không nuốt lỗi key, quota, prompt."""
+    code = getattr(exc, "code", None)
+    if code is not None:
+        return str(code) == "503"
+    return bool(re.match(r"^\s*503\b", str(exc)))
+
 
 
 def split_text_chunks(text: str, max_chars: int = CHUNK_SIZE_CHARS) -> list[str]:
@@ -157,6 +169,7 @@ def gemini_summarize(
     language: Language = "Giữ ngôn ngữ gốc",
     model: str = "gemini-3.8-flash",
     progress_callback: Callable[[int, int], None] | None = None,
+    model_used_callback: Callable[[str], None] | None = None,
 ) -> str:
     if not api_key.strip():
         raise ValueError("Chưa có Gemini API key. Chọn chế độ Demo hoặc nhập API key.")
@@ -170,19 +183,40 @@ def gemini_summarize(
     total_calls = len(chunks) + (1 if len(chunks) > 1 else 0)
     client = genai.Client(api_key=api_key.strip())
 
+    candidate_models = [model, *(m for m in FALLBACK_MODELS if m != model)]
+
     def generate(prompt: str) -> str:
-        response = client.models.generate_content(
-            model=model,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                max_output_tokens=4096,
-                thinking_config=types.ThinkingConfig(thinking_level="low"),
-            ),
-        )
-        result = (response.text or "").strip()
-        if not result:
-            raise RuntimeError("Mô hình không trả về nội dung. Hãy thử văn bản khác.")
-        return result
+        # SDK tự retry lỗi tạm thời. Chỉ sau khi model vẫn trả 503
+        # mới chuyển model khác; không retry vô hạn và không retry 400/401/429.
+        for index, candidate in enumerate(candidate_models):
+            try:
+                response = client.models.generate_content(
+                    model=candidate,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        max_output_tokens=4096,
+                        thinking_config=types.ThinkingConfig(thinking_level="low"),
+                    ),
+                )
+            except Exception as exc:
+                if not _is_overloaded_error(exc):
+                    raise
+                if index == len(candidate_models) - 1:
+                    raise RuntimeError(
+                        "Các mô hình Gemini đang quá tải (503). Ứng dụng đã thử "
+                        "các mô hình dự phòng nhưng chưa thành công. "
+                        "Hãy thử lại sau hoặc dùng chế độ Demo ngoại tuyến."
+                    ) from exc
+                continue
+
+            result = (response.text or "").strip()
+            if not result:
+                raise RuntimeError("Mô hình không trả về nội dung. Hãy thử văn bản khác.")
+            if model_used_callback:
+                model_used_callback(candidate)
+            return result
+
+        raise RuntimeError("Không tìm thấy mô hình Gemini khả dụng.")
 
     try:
         if len(chunks) == 1:
