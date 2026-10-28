@@ -9,13 +9,13 @@
 **1:00 – 2:30 — Thao tác**  
 1. Mở ứng dụng.
 2. Chọn Gemini AI, nhập API key (đã che).
-3. Nhấn Điền văn bản mẫu.
+3. Tải một file DOCX/PDF có lớp chữ (hoặc nhấn Điền văn bản mẫu).
 4. Chọn Ngắn, nhấn Tóm tắt.
 5. Đổi Vừa hoặc Chi tiết, chạy lại và chỉ ra sự khác biệt.
 6. Tải kết quả TXT và giới thiệu các chỉ số.
 
 **2:30 – 3:30 — Đánh giá & hạn chế**  
-"Em dự kiến đánh giá theo tính chính xác, độ bao quát và độ mạch lạc; số từ và phần trăm rút gọn chỉ là các chỉ số bổ sung. Điểm hạn chế là phụ thuộc API và chưa có chức năng đọc PDF."
+"Em dự kiến đánh giá theo tính chính xác, độ bao quát và độ mạch lạc; số từ và phần trăm rút gọn chỉ là các chỉ số bổ sung. Điểm hạn chế là phụ thuộc API, chỉ đọc PDF có lớp chữ và chưa hỗ trợ OCR file scan."
 
 **Nếu không có API key:** Chuyển Demo ngoại tuyến, nói rõ đây là **tóm tắt trích xuất** và **không phải kết quả Generative AI**. Không gọi đây là demo Gemini.
 
