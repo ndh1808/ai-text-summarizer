@@ -52,7 +52,7 @@ bash start_mac_linux.sh
 ### Tải file Word và PDF
 
 - Chọn **Tải file Word (.docx), PDF, TXT, MD** trên giao diện. Ứng dụng tự lấy nội dung từ đoạn văn/bảng Word và các trang PDF có lớp chữ rồi đưa vào ô văn bản để xem lại trước khi tóm tắt.
-- File tối đa **5 MB**; tài liệu PDF tối đa **40 trang**. Văn bản dài hơn **25.000 ký tự** sẽ chỉ dùng phần đầu và **hiện cảnh báo**; nên chia nhỏ tài liệu nếu cần toàn bộ.
+- File tối đa **50 MB**; tài liệu PDF tối đa **300 trang**. Văn bản dài hơn **200.000 ký tự** sẽ chỉ dùng phần đầu và **hiện cảnh báo**; nên chia nhỏ tài liệu nếu cần toàn bộ.
 - PDF scan chỉ có ảnh, PDF khóa mật khẩu, và file Word `.doc` cũ không được hỗ trợ. Hãy chuyển thành PDF có text/OCR hoặc DOCX trước khi tải.
 - Các file được đọc trong bộ nhớ, không lưu vào thư mục dự án. Khi chọn Gemini, nội dung văn bản sẽ được gửi tới nhà cung cấp mô hình; tránh tải tài liệu riêng tư.
 
@@ -113,7 +113,7 @@ python evaluate.py --mode gemini
 
 Script xuất `results/evaluation.csv` với số từ, mức rút gọn, thời gian và ba cột đánh giá cần **chấm thủ công**. Chưa có điểm đánh giá chất lượng nào được giả định. Bạn cần đọc bản gốc và tự chấm **độ chính xác / độ bao quát / độ mạch lạc (1–5)**.
 
-**Giới hạn hiện tại:** Nhận TXT, MD, DOCX và PDF có lớp văn bản; chưa đọc PDF scan chỉ gồm ảnh (chưa có OCR), không hỗ trợ .doc đời cũ. Mỗi file tối đa 5 MB, tối đa 40 trang PDF, tóm tắt 25.000 ký tự đầu và có cảnh báo nếu cắt bớt. Không có cơ sở dữ liệu hay cơ chế chia nhỏ tệp dài để tóm tắt toàn bộ. Chất lượng Gemini phụ thuộc API, văn bản và prompt. Mức rút gọn phần trăm không đại diện cho độ chính xác.
+**Giới hạn hiện tại:** Nhận TXT, MD, DOCX và PDF có lớp văn bản; chưa đọc PDF scan chỉ gồm ảnh (chưa có OCR), không hỗ trợ .doc đời cũ. Mỗi file tối đa 50 MB, tối đa 300 trang PDF, tóm tắt 200.000 ký tự đầu và có cảnh báo nếu cắt bớt. Không có cơ sở dữ liệu; tài liệu dài được chia đoạn cho Gemini nhưng chỉ trong phạm vi 200.000 ký tự đầu và có thể tăng chi phí/hạn mức API. Chất lượng Gemini phụ thuộc API, văn bản và prompt. Mức rút gọn phần trăm không đại diện cho độ chính xác.
 
 ## 6. Cấu trúc mã nguồn
 
@@ -152,3 +152,9 @@ AI_Text_Summarizer_Project/
 - [Streamlit documentation](https://docs.streamlit.io/)
 - [Hugging Face Transformers](https://github.com/huggingface/transformers)
 - [A Survey of Large Language Models](https://arxiv.org/abs/2303.18223)
+
+## Tài liệu dài (phiên bản 2)
+
+- Với văn bản dài, Gemini chia nội dung thành các phần tối đa 16.000 ký tự, tóm tắt lần lượt rồi tổng hợp thành kết quả chung. Việc này sử dụng nhiều lượt gọi API, có thể chậm và tiêu thụ hạn mức Gemini.
+- File đến **50 MB** được chấp nhận; PDF tối đa **300 trang**, nhưng chỉ trích xuất **200.000 ký tự đầu** trong mỗi lần xử lý. Nếu vượt giới hạn, ứng dụng **cảnh báo đã cắt bớt**. Để bao phủ toàn bộ tài liệu, hãy chia file trước khi tải.
+- Cấu hình giới hạn tải lên ở `.streamlit/config.toml` bằng `server.maxUploadSize = 50` và kiểm tra riêng trong `document_reader.py`.

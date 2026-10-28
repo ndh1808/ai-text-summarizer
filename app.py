@@ -9,8 +9,8 @@ from pathlib import Path
 import streamlit as st
 from dotenv import load_dotenv
 
-from document_reader import DocumentError, extract_document, MAX_UPLOAD_BYTES, MAX_TEXT_CHARS
-from summarizer import gemini_summarize, offline_summarize, word_count
+from document_reader import DocumentError, extract_document, MAX_UPLOAD_BYTES, MAX_TEXT_CHARS, MAX_PDF_PAGES
+from summarizer import gemini_summarize, offline_summarize, word_count, split_text_chunks
 
 load_dotenv()
 ROOT = Path(__file__).resolve().parent
@@ -79,7 +79,7 @@ with left:
         st.session_state.source = ""
         st.session_state.result = None
     file = st.file_uploader(
-        "Hoặc tải file Word (.docx), PDF, TXT, MD (tối đa 5 MB)",
+        "Hoặc tải file Word (.docx), PDF, TXT, MD (tối đa 50 MB)",
         type=["txt", "md", "docx", "pdf"],
         help="PDF cần có lớp văn bản; PDF scan bằng ảnh chưa hỗ trợ OCR.",
     )
@@ -89,7 +89,7 @@ with left:
         raw = file.getvalue()
         signature = (file.name, hashlib.sha256(raw).hexdigest())
         if len(raw) > MAX_UPLOAD_BYTES:
-            st.error("File lớn hơn 5 MB, hãy dùng file nhỏ hơn.")
+            st.error("File lớn hơn 50 MB, hãy dùng file nhỏ hơn.")
         elif st.session_state.get("uploaded_signature") != signature:
             try:
                 imported = extract_document(file.name, raw)
@@ -102,10 +102,10 @@ with left:
                 st.session_state.result = None
                 st.success(f"Đã đọc '{file.name}' — {word_count(imported.text):,} từ.")
         if st.session_state.get("uploaded_signature") == signature and st.session_state.get("uploaded_truncated"):
-            st.warning("Tài liệu dài: chỉ 25.000 ký tự đầu được nhập để tóm tắt. Hãy chia file nếu muốn xử lý toàn bộ.")
+            st.warning(f"Tài liệu dài: chỉ {MAX_TEXT_CHARS:,} ký tự đầu được đọc. Hãy chia nhỏ tài liệu để tóm tắt toàn bộ.")
     source = st.text_area("Nội dung cần tóm tắt", key="source", height=320,
                           placeholder="Nhập một đoạn văn hoặc nhấn 'Điền văn bản mẫu'...")
-    st.caption(f"{word_count(source):,} từ · {len(source):,} ký tự (giới hạn 25.000 ký tự)")
+    st.caption(f"{word_count(source):,} từ · {len(source):,} ký tự (giới hạn {MAX_TEXT_CHARS:,} ký tự)")
     with st.form("options_form"):
         length = st.radio("Độ dài bản tóm tắt", ["Ngắn", "Vừa", "Chi tiết"], horizontal=True, index=1)
         output_format = st.selectbox("Cách trình bày", ["Đoạn văn", "Gạch đầu dòng"])
@@ -120,8 +120,8 @@ with right:
             st.error("Bạn chưa nhập văn bản.")
         elif word_count(source) < 25:
             st.error("Vui lòng nhập văn bản tối thiểu 25 từ để kết quả có ý nghĩa.")
-        elif len(source) > 25_000:
-            st.error("Văn bản quá dài (giới hạn 25.000 ký tự).")
+        elif len(source) > MAX_TEXT_CHARS:
+            st.error(f"Văn bản quá dài (giới hạn {MAX_TEXT_CHARS:,} ký tự).")
         elif mode.startswith("Gemini") and not api_key:
             st.error("Cần Gemini API key để gọi AI. Có thể chuyển sang chế độ Demo ngoại tuyến.")
         else:
@@ -129,7 +129,17 @@ with right:
             try:
                 with st.spinner("Đang phân tích và tóm tắt..."):
                     if mode.startswith("Gemini"):
-                        result = gemini_summarize(source, api_key, length, output_format, language, model)
+                        chunks = split_text_chunks(source)
+                        if len(chunks) > 1:
+                            st.info(f"Tài liệu dài sẽ cần {len(chunks) + 1} lượt gọi Gemini (có thể tốn thời gian/hạn mức API).")
+                        progress_bar = st.progress(0, text="Đang tóm tắt...")
+                        def update_progress(done: int, total: int) -> None:
+                            progress_bar.progress(round(done / total * 100), text=f"Đã xử lý {done}/{total} lượt AI")
+                        try:
+                            result = gemini_summarize(source, api_key, length, output_format, language, model,
+                                                      progress_callback=update_progress)
+                        finally:
+                            progress_bar.empty()
                     else:
                         result = offline_summarize(source, length, output_format)
                 st.session_state.result = result

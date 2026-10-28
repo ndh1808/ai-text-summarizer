@@ -43,7 +43,7 @@ Môi trường Python 3.10+, các thư viện `streamlit`, `google-genai`, `pyth
 
 ## 7. Hạn chế và hướng phát triển
 
-Phiên bản hiện tại phụ thuộc Gemini API ở chế độ tạo sinh; tối đa 5 MB mỗi file, tối đa 40 trang PDF, và 25.000 ký tự đầu mỗi tài liệu với cảnh báo nếu vượt giới hạn. Có thể đọc DOCX/PDF có văn bản nhưng không hỗ trợ PDF scan chưa OCR hoặc nhiều tài liệu cùng lúc. Hướng phát triển: OCR PDF scan, chia đoạn văn bản dài, so sánh nhiều LLM, đánh giá bằng bộ dữ liệu chuẩn, phát triển tính năng truy hồi tài liệu (RAG).
+Phiên bản hiện tại phụ thuộc Gemini API ở chế độ tạo sinh; tối đa 50 MB mỗi file, tối đa 300 trang PDF, và 200.000 ký tự đầu mỗi tài liệu với cảnh báo nếu vượt giới hạn. Có thể đọc DOCX/PDF có văn bản nhưng không hỗ trợ PDF scan chưa OCR hoặc nhiều tài liệu cùng lúc. Hướng phát triển: OCR PDF scan, chia đoạn văn bản dài, so sánh nhiều LLM, đánh giá bằng bộ dữ liệu chuẩn, phát triển tính năng truy hồi tài liệu (RAG).
 
 ## 8. Kết luận
 
@@ -56,3 +56,6 @@ Phiên bản hiện tại phụ thuộc Gemini API ở chế độ tạo sinh; t
 3. https://googleapis.github.io/python-genai/
 4. https://docs.streamlit.io/
 5. https://github.com/huggingface/transformers
+
+
+**Nâng cấp dung lượng:** Ứng dụng nhận file tới 50 MB, PDF đến 300 trang, giới hạn trích xuất 200.000 ký tự đầu; tài liệu dài được tóm tắt theo từng phần với nhiều lượt gọi Gemini trước khi tổng hợp. Việc này tăng thời gian và sử dụng hạn mức API.

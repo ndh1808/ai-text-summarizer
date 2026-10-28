@@ -7,10 +7,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
+from zipfile import ZipFile, BadZipFile
 
-MAX_UPLOAD_BYTES = 5 * 1024 * 1024
-MAX_TEXT_CHARS = 25_000
-MAX_PDF_PAGES = 40
+MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+MAX_TEXT_CHARS = 200_000
+MAX_PDF_PAGES = 300
 SUPPORTED_SUFFIXES = {".txt", ".md", ".docx", ".pdf"}
 
 
@@ -29,20 +30,39 @@ def _read_docx(content: bytes) -> str:
     from docx.table import Table
 
     try:
+        # Tệp DOCX là ZIP: tránh đọc archive nén bất thường vào RAM.
+        with ZipFile(BytesIO(content)) as archive:
+            inflated = sum(item.file_size for item in archive.infolist())
+            if inflated > 120 * 1024 * 1024:
+                raise DocumentError("File Word có dữ liệu giải nén quá lớn (giới hạn 120 MB).")
         document = Document(BytesIO(content))
         sections: list[str] = []
-        # Đọc đoạn văn và bảng theo đúng thứ tự xuất hiện trong thân tài liệu.
+        count = 0
+        # Giữ thêm 1 ký tự để có thể báo cắt bớt chính xác.
+        def append(value: str) -> None:
+            nonlocal count
+            if not value or count > MAX_TEXT_CHARS:
+                return
+            piece = value[: MAX_TEXT_CHARS + 1 - count]
+            sections.append(piece)
+            count += len(piece) + 1
+
+        # Đọc văn bản và bảng theo thứ tự, dừng sớm khi đã đủ giới hạn.
         for block in document.iter_inner_content():
             if isinstance(block, Table):
                 for row in block.rows:
                     cells = [cell.text.strip() for cell in row.cells]
                     if any(cells):
-                        sections.append(" | ".join(cells))
+                        append(" | ".join(cells))
+                    if count > MAX_TEXT_CHARS:
+                        break
             else:
-                value = block.text.strip()
-                if value:
-                    sections.append(value)
+                append(block.text.strip())
+            if count > MAX_TEXT_CHARS:
+                break
         return "\n".join(sections)
+    except DocumentError:
+        raise
     except Exception as exc:
         raise DocumentError("Không đọc được file Word. Vui lòng dùng file .docx hợp lệ (không phải .doc cũ).") from exc
 
@@ -57,13 +77,16 @@ def _read_pdf(content: bytes) -> str:
         if len(reader.pages) > MAX_PDF_PAGES:
             raise DocumentError(f"PDF quá dài (tối đa {MAX_PDF_PAGES} trang). Hãy chia nhỏ tài liệu.")
         chunks = []
+        count = 0
         for page in reader.pages:
             # Chỉ đọc lớp text; PDF scan thuần ảnh cần OCR bên ngoài.
             extracted = (page.extract_text() or "").strip()
             if extracted:
-                chunks.append(extracted)
-            # Không cố đọc tất cả trang nếu đã vượt giới hạn xử lý.
-            if sum(len(part) for part in chunks) > MAX_TEXT_CHARS:
+                piece = extracted[: MAX_TEXT_CHARS + 1 - count]
+                chunks.append(piece)
+                count += len(piece) + 2
+            # Dừng sớm và đánh dấu vượt quá giới hạn nội dung.
+            if count > MAX_TEXT_CHARS:
                 break
         return "\n\n".join(chunks)
     except DocumentError:
@@ -80,7 +103,7 @@ def extract_document(filename: str, content: bytes) -> ParsedDocument:
     if not content:
         raise DocumentError("File trống. Vui lòng chọn file có nội dung.")
     if len(content) > MAX_UPLOAD_BYTES:
-        raise DocumentError("File lớn hơn 5 MB. Hãy chia nhỏ hoặc nén tài liệu rồi tải lại.")
+        raise DocumentError("File lớn hơn 50 MB. Hãy chia nhỏ hoặc nén tài liệu rồi tải lại.")
 
     if suffix in {".txt", ".md"}:
         try:

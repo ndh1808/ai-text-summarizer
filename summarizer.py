@@ -8,7 +8,7 @@ from __future__ import annotations
 import math
 import re
 from collections import Counter
-from typing import Literal
+from typing import Literal, Callable
 
 Length = Literal["Ngắn", "Vừa", "Chi tiết"]
 Format = Literal["Đoạn văn", "Gạch đầu dòng"]
@@ -129,6 +129,26 @@ QUY TẮC:
 """
 
 
+CHUNK_SIZE_CHARS = 16_000
+
+
+def split_text_chunks(text: str, max_chars: int = CHUNK_SIZE_CHARS) -> list[str]:
+    """Chia tài liệu theo ngắt đoạn/từ nếu có; không làm thất lạc nội dung."""
+    if max_chars < 100:
+        raise ValueError("Giới hạn mỗi phần phải >= 100 ký tự.")
+    remaining = text.strip()
+    parts = []
+    while remaining:
+        if len(remaining) <= max_chars:
+            parts.append(remaining)
+            break
+        boundary = max(remaining.rfind("\n", 0, max_chars + 1), remaining.rfind(" ", 0, max_chars + 1))
+        end = boundary if boundary >= int(max_chars * 0.6) else max_chars
+        parts.append(remaining[:end].strip())
+        remaining = remaining[end:].lstrip()
+    return [part for part in parts if part]
+
+
 def gemini_summarize(
     text: str,
     api_key: str,
@@ -136,6 +156,7 @@ def gemini_summarize(
     output_format: Format = "Đoạn văn",
     language: Language = "Giữ ngôn ngữ gốc",
     model: str = "gemini-2.5-flash",
+    progress_callback: Callable[[int, int], None] | None = None,
 ) -> str:
     if not api_key.strip():
         raise ValueError("Chưa có Gemini API key. Chọn chế độ Demo hoặc nhập API key.")
@@ -145,16 +166,44 @@ def gemini_summarize(
     from google import genai
     from google.genai import types
 
+    chunks = split_text_chunks(text)
+    total_calls = len(chunks) + (1 if len(chunks) > 1 else 0)
     client = genai.Client(api_key=api_key.strip())
-    try:
+
+    def generate(prompt: str) -> str:
         response = client.models.generate_content(
             model=model,
-            contents=build_prompt(text, length, output_format, language),
-            config=types.GenerateContentConfig(temperature=0.2, max_output_tokens=1300),
+            contents=prompt,
+            config=types.GenerateContentConfig(temperature=0.2, max_output_tokens=1600),
         )
         result = (response.text or "").strip()
         if not result:
             raise RuntimeError("Mô hình không trả về nội dung. Hãy thử văn bản khác.")
         return result
+
+    try:
+        if len(chunks) == 1:
+            final = generate(build_prompt(text, length, output_format, language))
+            if progress_callback:
+                progress_callback(1, 1)
+            return final
+
+        partial_summaries = []
+        for index, chunk in enumerate(chunks, start=1):
+            prompt = build_prompt(chunk, "Chi tiết", "Gạch đầu dòng", language)
+            prompt += f"\nĐây là phần {index}/{len(chunks)} của tài liệu lớn. Giữ lại các luận điểm và con số chính của riêng phần này."
+            partial_summaries.append(generate(prompt))
+            if progress_callback:
+                progress_callback(index, total_calls)
+
+        intermediate = "\n\n".join(
+            f"Phần {i}:\n{summary}" for i, summary in enumerate(partial_summaries, 1)
+        )
+        final_prompt = build_prompt(intermediate, length, output_format, language)
+        final_prompt += "\nHãy tổng hợp toàn bộ các phần thành một bản tóm tắt thống nhất, không lặp ý và không thêm dữ kiện mới."
+        final = generate(final_prompt)
+        if progress_callback:
+            progress_callback(total_calls, total_calls)
+        return final
     finally:
         client.close()

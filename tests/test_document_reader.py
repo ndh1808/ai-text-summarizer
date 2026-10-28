@@ -4,7 +4,7 @@ from io import BytesIO
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from document_reader import DocumentError, extract_document, MAX_UPLOAD_BYTES, MAX_TEXT_CHARS
+from document_reader import DocumentError, extract_document, MAX_UPLOAD_BYTES, MAX_TEXT_CHARS, MAX_PDF_PAGES
 
 
 class DocumentReaderTests(unittest.TestCase):
@@ -29,6 +29,11 @@ class DocumentReaderTests(unittest.TestCase):
         doc = extract_document("long.md", b"x" * (MAX_TEXT_CHARS + 123))
         self.assertTrue(doc.truncated)
         self.assertEqual(len(doc.text), MAX_TEXT_CHARS)
+
+    def test_limits_raised(self):
+        self.assertEqual(MAX_UPLOAD_BYTES, 50 * 1024 * 1024)
+        self.assertEqual(MAX_PDF_PAGES, 300)
+        self.assertEqual(MAX_TEXT_CHARS, 200_000)
 
     def test_docx_paragraphs_and_table(self):
         from docx import Document

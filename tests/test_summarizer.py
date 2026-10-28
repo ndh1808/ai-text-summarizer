@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from summarizer import build_prompt, offline_summarize, split_sentences, word_count
+from summarizer import build_prompt, offline_summarize, split_sentences, split_text_chunks, word_count
 
 
 class SummaryTests(unittest.TestCase):
@@ -34,6 +34,13 @@ class SummaryTests(unittest.TestCase):
     def test_empty_source(self):
         with self.assertRaises(ValueError):
             offline_summarize('')
+
+    def test_long_text_chunking(self):
+        original = " ".join(["Dữ liệu tóm tắt nghiên cứu." for _ in range(500)])
+        chunks = split_text_chunks(original, max_chars=250)
+        self.assertGreater(len(chunks), 1)
+        self.assertTrue(all(len(chunk) <= 250 for chunk in chunks))
+        self.assertEqual(" ".join(chunks), original)
 
     def test_prompt_guards(self):
         prompt = build_prompt('Thử nghiệm nguồn.', 'Vừa', 'Đoạn văn', 'Tiếng Việt')
