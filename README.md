@@ -12,7 +12,7 @@
 | Tính năng | Tình trạng |
 | --- | --- |
 | Giao diện web bằng Streamlit | ✅ Có |
-| Nhập trực tiếp hoặc tải tệp TXT/MD UTF-8 | ✅ Có |
+| Nhập trực tiếp hoặc tải TXT/MD UTF-8, Word DOCX, PDF có văn bản | ✅ Có |
 | Tóm tắt bằng Gemini API | ✅ Có mã tích hợp; **cần API key** |
 | Chọn bản tóm tắt Ngắn / Vừa / Chi tiết | ✅ Có |
 | Chọn đoạn văn / gạch đầu dòng | ✅ Có |
@@ -26,7 +26,7 @@
 
 **Yêu cầu:** Windows 10/11, Python 3.10 trở lên, Internet để cài thư viện; Internet + API key khi dùng Gemini.
 
-1. Giải nén file ZIP, vào thư mục `AI_Text_Summarizer_Project`.
+1. Clone repository GitHub hoặc tải ZIP và mở thư mục chứa `app.py`.
 2. Mở file `start_windows.bat`. Chương trình tự tạo môi trường Python, cài thư viện và khởi động ứng dụng.
 3. Trình duyệt mở trang `http://localhost:8501` (nếu chưa mở, sao chép địa chỉ do cửa sổ lệnh hiển thị).
 4. Chọn **Demo ngoại tuyến (trích xuất)**, nhấn **Điền văn bản mẫu** rồi **Tóm tắt văn bản** để thử trước.
@@ -48,6 +48,13 @@ py -3 -m venv .venv
 cd AI_Text_Summarizer_Project
 bash start_mac_linux.sh
 ```
+
+### Tải file Word và PDF
+
+- Chọn **Tải file Word (.docx), PDF, TXT, MD** trên giao diện. Ứng dụng tự lấy nội dung từ đoạn văn/bảng Word và các trang PDF có lớp chữ rồi đưa vào ô văn bản để xem lại trước khi tóm tắt.
+- File tối đa **5 MB**; tài liệu PDF tối đa **40 trang**. Văn bản dài hơn **25.000 ký tự** sẽ chỉ dùng phần đầu và **hiện cảnh báo**; nên chia nhỏ tài liệu nếu cần toàn bộ.
+- PDF scan chỉ có ảnh, PDF khóa mật khẩu, và file Word `.doc` cũ không được hỗ trợ. Hãy chuyển thành PDF có text/OCR hoặc DOCX trước khi tải.
+- Các file được đọc trong bộ nhớ, không lưu vào thư mục dự án. Khi chọn Gemini, nội dung văn bản sẽ được gửi tới nhà cung cấp mô hình; tránh tải tài liệu riêng tư.
 
 ## 3. Kết nối Generative AI thật (Gemini)
 
@@ -106,7 +113,7 @@ python evaluate.py --mode gemini
 
 Script xuất `results/evaluation.csv` với số từ, mức rút gọn, thời gian và ba cột đánh giá cần **chấm thủ công**. Chưa có điểm đánh giá chất lượng nào được giả định. Bạn cần đọc bản gốc và tự chấm **độ chính xác / độ bao quát / độ mạch lạc (1–5)**.
 
-**Giới hạn hiện tại:** Chỉ xử lý TXT/MD, không xử lý PDF; không có cơ sở dữ liệu; không có chức năng tóm tắt tài liệu cực dài theo từng đoạn; chất lượng Gemini phụ thuộc API, độ dài dữ liệu và prompt. Mức rút gọn phần trăm không đại diện cho độ chính xác.
+**Giới hạn hiện tại:** Nhận TXT, MD, DOCX và PDF có lớp văn bản; chưa đọc PDF scan chỉ gồm ảnh (chưa có OCR), không hỗ trợ .doc đời cũ. Mỗi file tối đa 5 MB, tối đa 40 trang PDF, tóm tắt 25.000 ký tự đầu và có cảnh báo nếu cắt bớt. Không có cơ sở dữ liệu hay cơ chế chia nhỏ tệp dài để tóm tắt toàn bộ. Chất lượng Gemini phụ thuộc API, văn bản và prompt. Mức rút gọn phần trăm không đại diện cho độ chính xác.
 
 ## 6. Cấu trúc mã nguồn
 
@@ -114,6 +121,7 @@ Script xuất `results/evaluation.csv` với số từ, mức rút gọn, thời
 AI_Text_Summarizer_Project/
 ├── app.py                 # Giao diện Streamlit
 ├── summarizer.py          # Prompt, Gemini API, demo trích xuất
+├── document_reader.py     # Trích xuất TXT/MD/DOCX/PDF
 ├── evaluate.py            # Xuất bảng đánh giá
 ├── requirements.txt       # Các thư viện Python
 ├── .env.example           # Mẫu cấu hình API key
@@ -125,6 +133,7 @@ AI_Text_Summarizer_Project/
 │   └── english_sample.txt
 ├── tests/
 │   └── test_summarizer.py
+├── tests/test_document_reader.py # Unit tests đọc Word/PDF
 └── docs/
     ├── BAO_CAO_PROJECT.md
     └── KICH_BAN_DEMO.md
