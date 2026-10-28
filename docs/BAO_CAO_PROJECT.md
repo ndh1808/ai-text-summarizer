@@ -10,7 +10,7 @@ Khối lượng tài liệu học tập và nghiên cứu lớn dẫn đến nhu
 
 ## 2. Mục tiêu
 
-Xây dựng ứng dụng web cho phép: (1) nhập văn bản tiếng Việt/Anh; (2) lựa chọn độ dài bản tóm tắt; (3) lựa chọn hình thức trình bày; (4) tóm tắt thông qua Gemini API; (5) xuất kết quả TXT; (6) thống kê một số chỉ số vận hành.
+Xây dựng ứng dụng web cho phép: (1) nhập văn bản hoặc tải TXT/MD/DOCX/PDF có lớp chữ bằng tiếng Việt/Anh; (2) lựa chọn độ dài bản tóm tắt; (3) lựa chọn hình thức trình bày; (4) tóm tắt thông qua Gemini API; (5) xuất kết quả TXT; (6) thống kê một số chỉ số vận hành.
 
 ## 3. Cơ sở công nghệ
 
@@ -22,7 +22,7 @@ Xây dựng ứng dụng web cho phép: (1) nhập văn bản tiếng Việt/Anh
 
 ## 4. Phân tích và thiết kế hệ thống
 
-**Đầu vào:** Văn bản TXT/MD hoặc văn bản nhập thủ công; độ dài Ngắn/Vừa/Chi tiết; kiểu đoạn văn/gạch đầu dòng; ngôn ngữ.  
+**Đầu vào:** Văn bản TXT/MD/DOCX/PDF có lớp chữ hoặc văn bản nhập thủ công; độ dài Ngắn/Vừa/Chi tiết; kiểu đoạn văn/gạch đầu dòng; ngôn ngữ.  
 **Xử lý:** Kiểm tra đầu vào → tạo prompt → gửi API → nhận phản hồi → hiển thị và lưu kết quả.  
 **Đầu ra:** Bản tóm tắt, số từ, tỷ lệ rút gọn, thời gian xử lý, tệp `.txt`.
 
@@ -30,7 +30,7 @@ Các khối chức năng được tách thành `app.py` (giao diện) và `summa
 
 ## 5. Triển khai
 
-Môi trường Python 3.10+, các thư viện `streamlit`, `google-genai`, `python-dotenv`. Sử dụng SDK `google.genai` để gọi `client.models.generate_content`. Cấu hình API key bằng biến môi trường hoặc nhập trực tiếp trên giao diện. Chế độ demo không sử dụng LLM mà chọn câu tiêu biểu theo tần suất từ, chỉ phục vụ chạy thử không kết nối mạng.
+Môi trường Python 3.10+, các thư viện `streamlit`, `google-genai`, `python-dotenv`, `python-docx`, `pypdf`. Dữ liệu Word/PDF được trích xuất bằng `document_reader.py` trước khi đưa vào mô hình. Sử dụng SDK `google.genai` để gọi `client.models.generate_content`. Cấu hình API key bằng biến môi trường hoặc nhập trực tiếp trên giao diện. Chế độ demo không sử dụng LLM mà chọn câu tiêu biểu theo tần suất từ, chỉ phục vụ chạy thử không kết nối mạng.
 
 ## 6. Kiểm thử và đánh giá
 
@@ -43,7 +43,7 @@ Môi trường Python 3.10+, các thư viện `streamlit`, `google-genai`, `pyth
 
 ## 7. Hạn chế và hướng phát triển
 
-Phiên bản hiện tại phụ thuộc Gemini API ở chế độ tạo sinh; xử lý tối đa 25.000 ký tự; không hỗ trợ PDF và tóm tắt nhiều tài liệu. Hướng phát triển: đọc PDF, chia đoạn văn bản dài, so sánh nhiều LLM, đánh giá bằng bộ dữ liệu chuẩn, phát triển tính năng truy hồi tài liệu (RAG).
+Phiên bản hiện tại phụ thuộc Gemini API ở chế độ tạo sinh; tối đa 5 MB mỗi file, tối đa 40 trang PDF, và 25.000 ký tự đầu mỗi tài liệu với cảnh báo nếu vượt giới hạn. Có thể đọc DOCX/PDF có văn bản nhưng không hỗ trợ PDF scan chưa OCR hoặc nhiều tài liệu cùng lúc. Hướng phát triển: OCR PDF scan, chia đoạn văn bản dài, so sánh nhiều LLM, đánh giá bằng bộ dữ liệu chuẩn, phát triển tính năng truy hồi tài liệu (RAG).
 
 ## 8. Kết luận
 
